@@ -106,6 +106,9 @@ private:
     template <typename T> 
     void Finalize(const ProcessOptions& options);
 
+	template <typename T>
+    bool Clean(const ProcessOptions& options);
+
 private:
     std::vector<uint32_t>                   m_attributes;
     std::vector<Subset>                     m_indexSubsets;

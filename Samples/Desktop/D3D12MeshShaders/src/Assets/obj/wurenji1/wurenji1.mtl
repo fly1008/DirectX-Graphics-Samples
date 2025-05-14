@@ -1,0 +1,43 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v5.0.0)
+
+newmtl material_0
+Kd 1 1 1
+Ks 0 0 0
+Tf 0 0 0
+d 1
+illum 1
+map_Kd ./TJSK0008.png
+
+newmtl material_1
+Kd 1 1 1
+Ks 0 0 0
+Tf 0 0 0
+d 1
+illum 1
+map_Kd ./TJSK6402.png
+
+newmtl material_2
+Kd 1 1 1
+Ks 0 0 0
+Tf 0 0 0
+d 1
+illum 1
+map_Kd ./TJSK0009.png
+
+newmtl material_3
+Kd 1 1 1
+Ks 0 0 0
+Tf 0 0 0
+d 1
+illum 1
+map_Kd ./TJSK0007.png
+
+newmtl material_4
+Kd 1 1 1
+Ks 0 0 0
+Tf 0 0 0
+d 1
+illum 1
+map_Kd ./TJSK0026.png
+
