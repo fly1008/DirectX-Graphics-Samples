@@ -196,25 +196,120 @@ bool MeshProcessor::Extract(const ProcessOptions& options, const WaveFrontReader
 }
 
 template <typename T>
+bool MeshProcessor::Clean(const ProcessOptions& options)
+{
+	// Pull out some final counts for readability
+	const uint32_t vertexCount = static_cast<uint32_t>(m_positions.size());
+	const uint32_t triCount = m_indexCount / 3;
+
+	ThrowIfFailed(DirectX::Clean(reinterpret_cast<T*>(m_indices.data()), triCount, vertexCount, nullptr, m_attributes.data(), m_dupVerts, true));
+
+	if (m_dupVerts.empty())
+	{
+		// No vertex duplication is needed for mesh clean
+		return true;
+	}
+
+	const size_t newVertexCount = vertexCount + m_dupVerts.size();
+
+	std::vector<DirectX::XMFLOAT3> newPositions;
+    newPositions.resize(newVertexCount);
+	memcpy(newPositions.data(), m_positions.data(), sizeof(XMFLOAT3) * vertexCount);
+
+	std::vector<DirectX::XMFLOAT3>          newNormals;
+	std::vector<DirectX::XMFLOAT2>          newUvs;
+	std::vector<DirectX::XMFLOAT3>          newTangents;
+	std::vector<DirectX::XMFLOAT3>          newBitangents;
+
+	if (m_normals.size())
+	{
+        newNormals.resize(newVertexCount);
+		memcpy(newNormals.data(), m_normals.data(), sizeof(XMFLOAT3) * vertexCount);
+	}
+
+	if (m_uvs.size())
+	{
+        newUvs.resize(newVertexCount);
+		memcpy(newUvs.data(), m_uvs.data(), sizeof(XMFLOAT2) * vertexCount);
+	}
+
+	if (m_tangents.size())
+	{
+        newTangents.resize(newVertexCount);
+		memcpy(newTangents.data(), m_tangents.data(), sizeof(XMFLOAT3) * vertexCount);
+	}
+
+	if (m_bitangents.size())
+	{
+        newBitangents.resize(newVertexCount);
+		memcpy(newBitangents.data(), m_bitangents.data(), sizeof(XMFLOAT3) * vertexCount);
+	}
+
+	size_t j = vertexCount;
+	for (auto it = m_dupVerts.begin(); it != m_dupVerts.end() && (j < newVertexCount); ++it, ++j)
+	{
+		assert(*it < vertexCount);
+
+		newPositions[j] = m_positions[*it];
+
+		if (m_normals.size())
+		{
+			newNormals[j] = m_normals[*it];
+		}
+
+		if (m_tangents.size())
+		{
+			newTangents[j] = m_tangents[*it];
+		}
+
+		if (m_bitangents.size())
+		{
+			newBitangents[j] = m_bitangents[*it];
+		}
+
+		if (m_uvs.size())
+		{
+			newUvs[j] = m_uvs[*it];
+		}
+	}
+
+	m_positions.swap(newPositions);
+	m_normals.swap(newNormals);
+	m_tangents.swap(newTangents);
+	m_bitangents.swap(newBitangents);
+	m_uvs.swap(newUvs);
+
+    m_dupVerts.clear();
+	
+    return true;
+}
+
+template <typename T>
 void MeshProcessor::Finalize(const ProcessOptions& options)
 {
+    // Clean the mesh
+    // bool b = Clean<T>(options);
+
     // Pull out some final counts for readability
     const uint32_t vertexCount = static_cast<uint32_t>(m_positions.size());
     const uint32_t triCount = m_indexCount / 3;
 
     // Resize all our interim data buffers to appropriate sizes for the mesh
-    m_positionReorder.resize(vertexCount);
     m_indexReorder.resize(m_indexCount * m_indexSize);
 
     m_faceRemap.resize(triCount);
-    m_vertexRemap.resize(vertexCount);
 
     ///
     // Use DirectXMesh to optimize our vertex buffer data
 
-    // Clean the mesh, sort faces by material, and reorder
-    ThrowIfFailed(DirectX::Clean(reinterpret_cast<T*>(m_indices.data()), triCount, vertexCount, nullptr, m_attributes.data(), m_dupVerts, true));
-    ThrowIfFailed(DirectX::AttributeSort(triCount, m_attributes.data(), m_faceRemap.data()));
+    // sort faces by material, and reorder
+	ThrowIfFailed(DirectX::Clean(reinterpret_cast<T*>(m_indices.data()), triCount, vertexCount, nullptr, m_attributes.data(), m_dupVerts, true));
+
+    const uint32_t newVertexCount = vertexCount + m_dupVerts.size();
+	m_positionReorder.resize(newVertexCount);
+	m_vertexRemap.resize(newVertexCount);
+
+	ThrowIfFailed(DirectX::AttributeSort(triCount, m_attributes.data(), m_faceRemap.data()));
     ThrowIfFailed(DirectX::ReorderIB(reinterpret_cast<T*>(m_indices.data()), triCount, m_faceRemap.data(), reinterpret_cast<T*>(m_indexReorder.data())));
 
     std::swap(m_indices, m_indexReorder);
@@ -226,10 +321,10 @@ void MeshProcessor::Finalize(const ProcessOptions& options)
     std::swap(m_indices, m_indexReorder);
 
     // Optimize our vertex data
-    ThrowIfFailed(DirectX::OptimizeVertices(reinterpret_cast<T*>(m_indices.data()), triCount, vertexCount, m_vertexRemap.data()));
+    ThrowIfFailed(DirectX::OptimizeVertices(reinterpret_cast<T*>(m_indices.data()), triCount, newVertexCount, m_vertexRemap.data()));
 
     // Finalize the index & vertex buffers (potential reordering)
-    ThrowIfFailed(DirectX::FinalizeIB(reinterpret_cast<T*>(m_indices.data()), triCount, m_vertexRemap.data(), vertexCount, reinterpret_cast<T*>(m_indexReorder.data())));
+    ThrowIfFailed(DirectX::FinalizeIB(reinterpret_cast<T*>(m_indices.data()), triCount, m_vertexRemap.data(), newVertexCount, reinterpret_cast<T*>(m_indexReorder.data())));
     ThrowIfFailed(DirectX::FinalizeVB(m_positions.data(), sizeof(XMFLOAT3), vertexCount, m_dupVerts.data(), m_dupVerts.size(), m_vertexRemap.data(), m_positionReorder.data()));
 
     std::swap(m_indices, m_indexReorder);
@@ -237,7 +332,7 @@ void MeshProcessor::Finalize(const ProcessOptions& options)
 
     if (HasAttribute(m_type, Attribute::Normal))
     {
-        m_normalReorder.resize(vertexCount);
+        m_normalReorder.resize(newVertexCount);
         ThrowIfFailed(DirectX::FinalizeVB(m_normals.data(), sizeof(XMFLOAT3), vertexCount, m_dupVerts.data(), m_dupVerts.size(), m_vertexRemap.data(), m_normalReorder.data()));
 
         std::swap(m_normals, m_normalReorder);
@@ -245,7 +340,7 @@ void MeshProcessor::Finalize(const ProcessOptions& options)
 
     if (HasAttribute(m_type, Attribute::TexCoord))
     {
-        m_uvReorder.resize(vertexCount);
+        m_uvReorder.resize(newVertexCount);
         ThrowIfFailed(DirectX::FinalizeVB(m_uvs.data(), sizeof(XMFLOAT2), vertexCount, m_dupVerts.data(), m_dupVerts.size(), m_vertexRemap.data(), m_uvReorder.data()));
 
         std::swap(m_uvs, m_uvReorder);
@@ -263,9 +358,9 @@ void MeshProcessor::Finalize(const ProcessOptions& options)
 
     if (!HasAttribute(m_type, Attribute::Normal))
     {
-        m_normals.resize(vertexCount);
+        m_normals.resize(newVertexCount);
 
-        ThrowIfFailed(DirectX::ComputeNormals(reinterpret_cast<T*>(m_indices.data()), triCount, m_positions.data(), vertexCount, CNORM_DEFAULT, m_normals.data()));
+        ThrowIfFailed(DirectX::ComputeNormals(reinterpret_cast<T*>(m_indices.data()), triCount, m_positions.data(), newVertexCount, CNORM_DEFAULT, m_normals.data()));
     }
 
     // Compute our tangent frame
