@@ -370,8 +370,8 @@ void MeshProcessor::Finalize(const ProcessOptions& options)
         m_type = AddAttribute(m_type, Attribute::Tangent);
         m_type = AddAttribute(m_type, Attribute::Bitangent);
 
-        m_tangents.resize(vertexCount);
-        m_bitangents.resize(vertexCount);
+        m_tangents.resize(newVertexCount);
+        m_bitangents.resize(newVertexCount);
 
         ThrowIfFailed(DirectX::ComputeTangentFrame(reinterpret_cast<T*>(m_indices.data()), triCount, m_positions.data(), m_normals.data(), m_uvs.data(), vertexCount, m_tangents.data(), m_bitangents.data()));
     }

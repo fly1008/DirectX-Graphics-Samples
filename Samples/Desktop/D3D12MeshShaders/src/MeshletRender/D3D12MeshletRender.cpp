@@ -12,7 +12,9 @@
 #include "stdafx.h"
 #include "D3D12MeshletRender.h"
 
-const wchar_t* D3D12MeshletRender::c_meshFilename = L"..\\Assets\\Dragon_LOD0.bin";
+// const wchar_t* D3D12MeshletRender::c_meshFilename = L"..\\Assets\\Dragon_LOD0.bin";
+//const wchar_t* D3D12MeshletRender::c_meshFilename = L"..\\Assets\\obj\\wurenji1\\wurenji1_p-nutb.bin";
+const wchar_t* D3D12MeshletRender::c_meshFilename = L"..\\Assets\\obj\\wurenji1\\wurenji1_pn.bin";
 
 const wchar_t* D3D12MeshletRender::c_meshShaderFilename = L"MeshletMS.cso";
 const wchar_t* D3D12MeshletRender::c_pixelShaderFilename = L"MeshletPS.cso";
@@ -33,6 +35,8 @@ D3D12MeshletRender::D3D12MeshletRender(UINT width, UINT height, std::wstring nam
 
 void D3D12MeshletRender::OnInit()
 {
+	// x=-0.0183160063 y=0.0398968905 z=0.00469959481 w=0.7
+
     m_camera.Init({ 0, 75, 150 });
     m_camera.SetMoveSpeed(150.0f);
 
@@ -44,20 +48,19 @@ void D3D12MeshletRender::OnInit()
 void D3D12MeshletRender::LoadPipeline()
 {
     UINT dxgiFactoryFlags = 0;
-
 #if defined(_DEBUG)
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-    {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-        {
-            debugController->EnableDebugLayer();
+    //{
+    //    ComPtr<ID3D12Debug> debugController;
+    //    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+    //    {
+    //        debugController->EnableDebugLayer();
 
-            // Enable additional debug layers.
-            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-        }
-    }
+    //        // Enable additional debug layers.
+    //        dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+    //    }
+    //}
 #endif
 
     ComPtr<IDXGIFactory4> factory;
@@ -275,23 +278,27 @@ void D3D12MeshletRender::LoadAssets()
 
     m_model.LoadFromFile(c_meshFilename);
     m_model.UploadGpuResources(m_device.Get(), m_commandQueue.Get(), m_commandAllocators[m_frameIndex].Get(), m_commandList.Get());
+    XMFLOAT3 c = m_model.GetBoundingSphere().Center;
+    float r = m_model.GetBoundingSphere().Radius;
+	m_camera.Init({ c.x, c.y, c.z - 2* r });
+    m_camera.SetMoveSpeed(r*0.5);
 
-#ifdef _DEBUG
-    // Mesh shader file expects a certain vertex layout; assert our mesh conforms to that layout.
-    const D3D12_INPUT_ELEMENT_DESC c_elementDescs[2] =
-    {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 1 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 1 },
-    };
-
-    for (auto& mesh : m_model)
-    {
-        assert(mesh.LayoutDesc.NumElements == 2);
-
-        for (uint32_t i = 0; i < _countof(c_elementDescs); ++i)
-            assert(std::memcmp(&mesh.LayoutElems[i], &c_elementDescs[i], sizeof(D3D12_INPUT_ELEMENT_DESC)) == 0);
-    }
-#endif
+//#ifdef _DEBUG
+//    // Mesh shader file expects a certain vertex layout; assert our mesh conforms to that layout.
+//    const D3D12_INPUT_ELEMENT_DESC c_elementDescs[2] =
+//    {
+//        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 1 },
+//        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 1 },
+//    };
+//
+//    for (auto& mesh : m_model)
+//    {
+//        assert(mesh.LayoutDesc.NumElements == 2);
+//
+//        for (uint32_t i = 0; i < _countof(c_elementDescs); ++i)
+//            assert(std::memcmp(&mesh.LayoutElems[i], &c_elementDescs[i], sizeof(D3D12_INPUT_ELEMENT_DESC)) == 0);
+//    }
+//#endif
     
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
