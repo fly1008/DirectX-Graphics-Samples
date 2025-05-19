@@ -202,7 +202,8 @@ HRESULT internal::ComputeMeshlets(
 //
 // Strongly influenced by https://github.com/zeux/meshoptimizer - Thanks amigo!
 //
-
+// CullData说明， https://www.jianshu.com/p/8725c07a17f0
+// 
 template <typename T>
 HRESULT internal::ComputeCullData(
     const XMFLOAT3* positions, uint32_t vertexCount,
@@ -269,6 +270,8 @@ HRESULT internal::ComputeCullData(
             minDot = XMVectorMin(minDot, dot);
         }
 
+        // 如果圆锥的顶角是钝角，则没有剔除意义，
+        // 所以对Axis和Meshlet每个面的法线做点积，如果有小于0的，则代表是退化圆锥：
         if (XMVector4Less(minDot, XMVectorReplicate(0.1f)))
         {
             // Degenerate cone
@@ -308,7 +311,7 @@ HRESULT internal::ComputeCullData(
 
             // dn should be larger than mindp cutoff above
             assert(dn > 0.0f);
-            float t = dc / dn;
+            float t = dc / dn; // dn = cos(d) = a / b; b = a / cos(d); 并且a = dc
 
             maxt = (t > maxt) ? t : maxt;
         }
