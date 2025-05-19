@@ -373,7 +373,7 @@ void MeshProcessor::Finalize(const ProcessOptions& options)
         m_tangents.resize(newVertexCount);
         m_bitangents.resize(newVertexCount);
 
-        ThrowIfFailed(DirectX::ComputeTangentFrame(reinterpret_cast<T*>(m_indices.data()), triCount, m_positions.data(), m_normals.data(), m_uvs.data(), vertexCount, m_tangents.data(), m_bitangents.data()));
+        ThrowIfFailed(DirectX::ComputeTangentFrame(reinterpret_cast<T*>(m_indices.data()), triCount, m_positions.data(), m_normals.data(), m_uvs.data(), newVertexCount, m_tangents.data(), m_bitangents.data()));
     }
 
     // Meshletize our mesh and generate per-meshlet culling data
